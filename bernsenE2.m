@@ -76,6 +76,7 @@ output(mask & image>=128) = 1;
 globalMask = output;
 % Otherwise compare to the mean value
 output(~mask) = (image(~mask) >= T(~mask));
-localmask = zeros(size(image));
-localmask(~mask) = (image(~mask) >= T(~mask));
+%localmask = zeros(size(image));
+localmask = local_contrast >= contrast_threshold;
+%localmask(~mask) = (image(~mask) >= T(~mask));
 
