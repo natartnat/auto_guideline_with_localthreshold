@@ -28,7 +28,7 @@ for type=1:6
         fich1 = fullfile(pathname,tempname);[~,name,~] = fileparts(tempname);
         fichAns = fullfile(pathnameAns,tempAns);
         % save path
-        savingPath = strcat(pathname,'resultCompare\ourMethod_newImage_31082016_Edit_test\');
+        savingPath = strcat(pathname,'resultCompare\ourMethod_newImage_01092016_noisereduct\');
         % convert to gray
         try
             im1 = imread(fich1);
@@ -65,13 +65,15 @@ for type=1:6
         Result_of = strcat('_result_',proposed,'_localContrast_T',num2str(T),'_ws',num2str(ws(j)));
         % size of image
         [M ,N] = size(A);
+        BeReduce = [];
         % boundary and flood fill
         [BW,B,~,~] = fillMask(A);
         [BWAns,~,~,~] = fillMask(imGrayAns);
         % error compare
         error = (sum(sum(abs( im2bw(BW)-im2bw(BWAns) ))) / (M*N)) * 100;
         % show comparison
-        subplot(1,2,1), imshow(BW);
+        subplot(1,2,1),
+        imshow(BW);title(['windowsize : ' num2str(ws(j)) 'x' num2str(ws(j)) ' error : ' num2str(error)]);
         % shutdown warning 
             try 
                 w = warning('query','last');
@@ -79,31 +81,35 @@ for type=1:6
                 warning('off',id);
             catch
             end
+            % [underConstruction]reduce noise
+            BeReduce = length(B);
+             [B] = areaFilter(B,M*N,0.10);
+               
             % show line for our method
-        if type == 1
-            for m=1:length(B),
-                boundary = B{m};
-               % [underConstruction]reduce noise
-               % [ans] = noiseReduction(M,N,boundary,B)
-                    hold on,plot(boundary(:,2), boundary(:,1),'LineWidth',2);
+            if length(B) == 1
+                boundary = B{1};
+                hold on,plot(boundary(:,2), boundary(:,1),'LineWidth',2);
             end
-        end   
-            % show result compare and error
-            if size(B,1) == 1 ;
-                % stop when has 1 contour only
-                disp([name ' ' proposed ' error: ' num2str(error) ' Wsize :' num2str(ws(j)) ' Nobject: ' num2str(length(B)) ' BreakHere '])
-                % break;
-            else
-                disp([name ' ' proposed ' error: ' num2str(error) ' Wsize :' num2str(ws(j)) ' Nobject: ' num2str(length(B))])
-            end
+            
             % show in image
-            title(['windowsize : ' num2str(ws(j)) 'x' num2str(ws(j)) ' error : ' num2str(error)]);
-            subplot(1,2,2),imshow(abs(BW-im2bw(BWAns)));
-            title(['error : ' num2str(error)]);
+            subplot(1,2,2),imshow(abs(BW-im2bw(BWAns)));title(['error : ' num2str(error)]);
+            
             % save image
             saveas(fig,strcat(savingPath,name,Result_of,'.png'));
             % clear fig
             clf(fig);
+            
+            
+            % show result compare and error
+            if size(B,1) == 1 ;
+                % stop when has 1 contour only
+                disp([name ' ' proposed ' err: ' num2str(error) ' W :' num2str(ws(j)) ...
+                    ' Nobj: ' num2str(length(B)) ' Bobj: ' num2str(BeReduce) ' Break'])
+                break;
+            else
+                disp([name ' ' proposed ' err: ' num2str(error) ' W :' num2str(ws(j)) ...
+                    ' Nobj: ' num2str(length(B)) ' Bobj: ' num2str(BeReduce) ])
+            end
         end
     end   
 end
@@ -122,13 +128,28 @@ local_contrast = localMax - localMin;
 localmask = local_contrast >= contrast_threshold;
 
 end
-function [ans] = noiseReduction(M,N,boundary,B)
+function [Breturn] = noiseReduction(M,N,boundary,B)
 %objArea = (max(boundary(:,1))-min(boundary(:,1)))*(max(boundary(:,2))-min(boundary(:,2)));
                %['objArea : ' num2str(objArea/(M*N))]
                %if objArea > 0.01*M*N %|| length(B) == 1;
                %ans = B(i);
                %break;
                %end
+end
+function [Breturn] = areaFilter(Boundary,imageSize,condition)
+% return reduction of noise area
+    Breturn = {};num = 1;
+    for i = 1:length(Boundary)
+        matrix = cell2mat(Boundary(i));
+        area = polyarea(matrix(:,1),matrix(:,2));
+        if area < condition * imageSize
+            continue;
+        else
+            Breturn(num) = Boundary(i);
+            num = num + 1;
+        end
+    end
+    
 end
 function []  = plotCompare(im1,A,imGrayAns,j)
 % unused 
